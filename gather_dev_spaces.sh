@@ -36,6 +36,9 @@ readarray -t API_RESOURCES < <(
   oc api-resources -o name | grep -E 'devworkspace|devfile|eclipse\.che'
 )
 
+# Collect resources sequentially (one at a time) for better resilience.
+# Trade-off: Sequential is slower but prevents one failing resource from blocking the entire collection.
+# Alternative (faster but less resilient): oc adm inspect $(IFS=,; echo "${API_RESOURCES[*]}") -A --dest-dir="$LOGS_DIR"
 for resource in "${API_RESOURCES[@]}"; do
   echo "[INFO] Collecting resource: $resource"
 
@@ -115,6 +118,9 @@ for ns in "${UNIQUE_NAMESPACES[@]}"; do
 
     # Collect pod descriptions for operator pods
     readarray -t OPERATOR_PODS < <(oc get pods -n "$ns" -o name 2>/dev/null || true)
+    if [ "${#OPERATOR_PODS[@]}" -gt 0 ]; then
+      echo "[INFO]   Collecting logs for ${#OPERATOR_PODS[@]} pod(s) in operator namespace: $ns"
+    fi
     for pod in "${OPERATOR_PODS[@]}"; do
       pod_name="${pod#*/}"  # Remove 'pod/' prefix
       if [ -n "$pod_name" ]; then
@@ -230,6 +236,9 @@ if [ "${#WS_NAMESPACES[@]}" -gt 0 ]; then
       # Collect pod descriptions
       mkdir -p "$LOGS_DIR/workspace-namespaces/${ns_name}/pod-descriptions"
       readarray -t PODS < <(oc get pods -n "$ns_name" -o name 2>/dev/null || true)
+      if [ "${#PODS[@]}" -gt 0 ]; then
+        echo "[INFO]   Collecting logs for ${#PODS[@]} pod(s) in workspace namespace: $ns_name"
+      fi
       for pod in "${PODS[@]}"; do
         pod_name="${pod#*/}"  # Remove 'pod/' prefix
         if [ -n "$pod_name" ]; then
@@ -400,4 +409,9 @@ oc adm inspect proxy --dest-dir="$LOGS_DIR" || true
 # Done
 ############################################
 echo "[INFO] Must-gather completed. Output: $LOGS_DIR"
+echo "[INFO] Summary:"
+echo "[INFO]   - CRDs collected: ${#CRDS[@]}"
+echo "[INFO]   - API resources collected: ${#API_RESOURCES[@]}"
+echo "[INFO]   - Operator namespaces: ${#UNIQUE_NAMESPACES[@]}"
+echo "[INFO]   - Workspace namespaces: ${#WS_NAMESPACES[@]}"
 sync

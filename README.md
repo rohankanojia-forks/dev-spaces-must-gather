@@ -7,7 +7,7 @@
 ## Usage
 
 ```sh
-oc adm must-gather --image=quay.io/rhn_support_jorbell/dev-spaces-must-gather:latest
+oc adm must-gather --image=quay.io/<your-org>/dev-spaces-must-gather:latest
 ```
 
 The command above will create a local directory with a dump of the Dev Spaces state in your OpenShift cluster.

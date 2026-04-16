@@ -29,16 +29,17 @@ jobs:
         id: prep
         run: |
           DOCKER_IMAGE=${{ env.IMAGE_REGISTRY }}/${{ secrets.QUAY_REGISTRY_USERNAME }}/dev-spaces-must-gather
-          VERSION=main
           SHORTREF=${GITHUB_SHA::8}
+          LATEST_TAG=",${DOCKER_IMAGE}:latest"
 
           # If this is git tag, use the tag name as a docker tag
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
-            # It is a tag (release), let's also build latest
-            TAGS="$TAGS,${DOCKER_IMAGE}:latest"
+            TAGS="${DOCKER_IMAGE}:${VERSION},${DOCKER_IMAGE}:${SHORTREF}${LATEST_TAG}"
+          else
+            # For main branch, just use commit SHA and latest
+            TAGS="${DOCKER_IMAGE}:${SHORTREF}${LATEST_TAG}"
           fi
-          TAGS="${DOCKER_IMAGE}:${VERSION},${DOCKER_IMAGE}:${SHORTREF}${TAGS}"
 
           # Set output parameters.
           echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
